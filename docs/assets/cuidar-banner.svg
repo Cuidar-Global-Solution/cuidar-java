@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Cuidar+ — Todo cuidado em uma só plataforma</title>
+  <desc id="desc">Banner roxo da API Java do Cuidar+, com linhas orbitais e um pulso suave ao redor do símbolo de cuidado.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#171027"/><stop offset="1" stop-color="#30204e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#ddd0ff"/><stop offset="1" stop-color="#9b6af3"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop stop-color="#9860f0" stop-opacity=".25"/><stop offset="1" stop-color="#9860f0" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#c4b5fd" stroke-opacity=".045"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="360" rx="24" fill="url(#grid)"/>
+  <circle cx="990" cy="180" r="250" fill="url(#glow)"/>
+  <path d="M64 56H108" stroke="#b48aff" stroke-width="3" stroke-linecap="round"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="124" y="62" fill="#d1bafa" font-size="13" font-weight="600" letter-spacing="3">CITIZENTECH / FIAP 2026</text>
+    <text x="60" y="170" fill="#faf7ff" font-size="82" font-weight="700" letter-spacing="-4">Cuidar<tspan fill="#bb95ff">+</tspan></text>
+    <text x="65" y="218" fill="#e4d9f6" font-size="25">Todo cuidado em uma só plataforma.</text>
+    <text x="66" y="278" fill="#b6a4cf" font-size="14" letter-spacing="2">API JAVA</text>
+    <circle cx="171" cy="273" r="2" fill="#9473be"/>
+    <text x="186" y="278" fill="#b6a4cf" font-size="14" letter-spacing="2">ROTINA DE CUIDADOS</text>
+  </g>
+  <g transform="translate(982 180)" fill="none">
+    <circle r="125" stroke="#c4a0ff" stroke-opacity=".13"/>
+    <circle r="91" stroke="#c4a0ff" stroke-opacity=".2"/>
+    <circle r="64" stroke="#c4a0ff" stroke-width="1.5" opacity=".25">
+      <animate attributeName="r" values="64;112;125" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values=".3;.12;0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="63" fill="#231537" stroke="#ab80eb" stroke-opacity=".6"/>
+    <path d="M-25-9H-9V-25H9V-9H25V9H9V25H-9V9H-25Z" fill="url(#accent)"/>
+    <g>
+      <circle cx="0" cy="-125" r="5" fill="#c5a1ff"/>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="40s" repeatCount="indefinite"/>
+    </g>
+    <circle cx="-91" cy="0" r="4" fill="#a77fe2"/>
+    <circle cx="91" cy="0" r="4" fill="#a77fe2"/>
+  </g>
+  <path d="M65 322H1135" stroke="#bb95ff" stroke-opacity=".14"/>
+</svg>
