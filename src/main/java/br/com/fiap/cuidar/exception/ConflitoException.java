@@ -1,0 +1,6 @@
+package br.com.fiap.cuidar.exception;
+public class ConflitoException extends RuntimeException {
+    public ConflitoException(String mensagem, Throwable causa) {
+        super(mensagem, causa);
+    }
+}
