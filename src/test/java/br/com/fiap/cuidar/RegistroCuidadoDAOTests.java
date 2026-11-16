@@ -13,6 +13,38 @@ import static org.mockito.ArgumentMatchers.*;
 
 class RegistroCuidadoDAOTests {
     @Test
+    void areaHabilitadaConsultaParParametrizadoEFechaRecursos() throws Exception {
+        for (boolean vinculoExiste : new boolean[]{true, false}) {
+            DataSource ds = mock(DataSource.class);
+            Connection c = mock(Connection.class);
+            PreparedStatement s = mock(PreparedStatement.class);
+            ResultSet rs = mock(ResultSet.class);
+            when(ds.getConnection()).thenReturn(c);
+            when(c.prepareStatement("SELECT 1 FROM TB_PESSOA_AREA_CUIDADO WHERE CD_PESSOA_ACOMPANHADA = ? AND CD_AREA = ?"))
+                    .thenReturn(s);
+            when(s.executeQuery()).thenReturn(rs);
+            when(rs.next()).thenReturn(vinculoExiste);
+            assertEquals(vinculoExiste, new RegistroCuidadoDAO(ds).areaHabilitada(3L, 1L));
+            verify(s).setLong(1, 3L);
+            verify(s).setLong(2, 1L);
+            verify(rs).close(); verify(s).close(); verify(c).close();
+        }
+    }
+
+    @Test
+    void falhaNaConsultaDeAreaViraPersistenciaEFechaRecursos() throws Exception {
+        DataSource ds = mock(DataSource.class);
+        Connection c = mock(Connection.class);
+        PreparedStatement s = mock(PreparedStatement.class);
+        when(ds.getConnection()).thenReturn(c);
+        when(c.prepareStatement(anyString())).thenReturn(s);
+        when(s.executeQuery()).thenThrow(new SQLException("SQL privado"));
+        assertThrows(br.com.fiap.cuidar.exception.PersistenciaException.class,
+                () -> new RegistroCuidadoDAO(ds).areaHabilitada(3L, 1L));
+        verify(s).close(); verify(c).close();
+    }
+
+    @Test
     void cadastrarUsaSequencePreservaHorarioNulosEFechaRecursos() throws Exception {
         DataSource ds = mock(DataSource.class); Connection c = mock(Connection.class);
         PreparedStatement s = mock(PreparedStatement.class); ResultSet keys = mock(ResultSet.class);

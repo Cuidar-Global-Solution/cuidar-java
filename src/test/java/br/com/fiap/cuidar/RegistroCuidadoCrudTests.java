@@ -37,7 +37,11 @@ class RegistroCuidadoCrudTests {
     void configurar() {
         dao = mock(RegistroCuidadoDAO.class);
         pessoas = mock(PessoaAcompanhadaService.class);
-        var service = new RegistroCuidadoService(dao, pessoas);
+        var areas = mock(AreaCuidadoService.class);
+        when(pessoas.buscarPorId(3L)).thenReturn(new PessoaAcompanhada());
+        when(areas.buscarPorId(1L)).thenReturn(new AreaCuidado());
+        when(dao.areaHabilitada(3L, 1L)).thenReturn(true);
+        var service = new RegistroCuidadoService(dao, pessoas, areas);
         var mapper = new RegistroCuidadoMapper(new ModelMapper());
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
@@ -89,6 +93,8 @@ class RegistroCuidadoCrudTests {
         erro(mvc.perform(get(ROTA + "/99")), 404, ROTA + "/99");
         erro(mvc.perform(put(ROTA + "/99").contentType(MediaType.APPLICATION_JSON).content(JSON)), 404, ROTA + "/99");
         erro(mvc.perform(delete(ROTA + "/99")), 404, ROTA + "/99");
+        verify(dao, never()).areaHabilitada(anyLong(), anyLong());
+        verify(dao, never()).atualizar(any());
     }
 
     @Test
@@ -146,6 +152,85 @@ class RegistroCuidadoCrudTests {
         erro(mvc.perform(post(ANINHADA).contentType(MediaType.APPLICATION_JSON)
                 .content(JSON.replace("\"pessoaAcompanhadaId\":3,", ""))), 404, ANINHADA);
         verifyNoInteractions(dao);
+    }
+
+    @Test
+    void postDiretoComAreaHabilitadaGrava() throws Exception {
+        prepararCadastroPermitido();
+        mvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON).content(JSON))
+                .andExpect(status().isCreated());
+        var ordem = inOrder(dao);
+        ordem.verify(dao).areaHabilitada(3L, 1L);
+        ordem.verify(dao).cadastrar(any());
+    }
+
+    @Test
+    void postDiretoSemVinculoRetorna409SemGravar() throws Exception {
+        when(dao.areaHabilitada(3L, 1L)).thenReturn(false);
+        conferirAreaBloqueada(mvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON).content(JSON)), ROTA);
+        verify(dao).areaHabilitada(3L, 1L);
+        verify(dao, never()).cadastrar(any());
+    }
+
+    @Test
+    void postAninhadoComAreaHabilitadaUsaPessoaDaUrl() throws Exception {
+        prepararCadastroPermitido();
+        mvc.perform(post(ANINHADA).contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.replace("\"pessoaAcompanhadaId\":3", "\"pessoaAcompanhadaId\":88")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.pessoaAcompanhadaId").value(3));
+        var ordem = inOrder(dao);
+        ordem.verify(dao).areaHabilitada(3L, 1L);
+        ordem.verify(dao).cadastrar(argThat(r -> r.getPessoaAcompanhadaId().equals(3L)));
+        verify(dao, never()).areaHabilitada(88L, 1L);
+    }
+
+    @Test
+    void postAninhadoSemVinculoRetorna409SemGravar() throws Exception {
+        when(dao.areaHabilitada(3L, 1L)).thenReturn(false);
+        conferirAreaBloqueada(mvc.perform(post(ANINHADA).contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.replace("\"pessoaAcompanhadaId\":3", "\"pessoaAcompanhadaId\":88"))), ANINHADA);
+        verify(dao).areaHabilitada(3L, 1L);
+        verify(dao, never()).areaHabilitada(88L, 1L);
+        verify(dao, never()).cadastrar(any());
+    }
+
+    @Test
+    void putComAreaHabilitadaGravaNovoParPessoaArea() throws Exception {
+        var existente = new RegistroCuidado();
+        existente.setId(9L); existente.setPessoaAcompanhadaId(8L); existente.setAreaId(2L);
+        when(dao.buscarPorId(9L)).thenReturn(Optional.of(existente));
+        when(dao.atualizar(any())).thenReturn(true);
+        mvc.perform(put(ROTA + "/9").contentType(MediaType.APPLICATION_JSON).content(JSON))
+                .andExpect(status().isOk());
+        var ordem = inOrder(dao);
+        ordem.verify(dao).buscarPorId(9L);
+        ordem.verify(dao).areaHabilitada(3L, 1L);
+        ordem.verify(dao).atualizar(argThat(r -> r.getId().equals(9L)
+                && r.getPessoaAcompanhadaId().equals(3L) && r.getAreaId().equals(1L)));
+    }
+
+    @Test
+    void putSemVinculoRetorna409SemGravar() throws Exception {
+        when(dao.buscarPorId(9L)).thenReturn(Optional.of(new RegistroCuidado()));
+        when(dao.areaHabilitada(3L, 1L)).thenReturn(false);
+        conferirAreaBloqueada(mvc.perform(put(ROTA + "/9").contentType(MediaType.APPLICATION_JSON).content(JSON)), ROTA + "/9");
+        verify(dao).areaHabilitada(3L, 1L);
+        verify(dao, never()).atualizar(any());
+    }
+
+    private void prepararCadastroPermitido() {
+        when(dao.cadastrar(any())).thenAnswer(i -> {
+            RegistroCuidado registro = i.getArgument(0);
+            registro.setId(9L);
+            return registro;
+        });
+    }
+
+    private void conferirAreaBloqueada(ResultActions resultado, String caminho) throws Exception {
+        erro(resultado, 409, caminho)
+                .andExpect(jsonPath("$.erro").value("Conflict"))
+                .andExpect(jsonPath("$.mensagem").value("A área de cuidado não está habilitada para esta pessoa acompanhada."))
+                .andExpect(jsonPath("$.detalhes").isEmpty());
     }
 
     private ResultActions erro(ResultActions resultado, int codigo, String caminho) throws Exception {

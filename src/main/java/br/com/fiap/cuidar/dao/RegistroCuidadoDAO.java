@@ -7,6 +7,14 @@ import java.sql.*;
 import java.util.*;
 @Repository
 public class RegistroCuidadoDAO {
+    public boolean areaHabilitada(Long pessoaId, Long areaId) {
+        String sql = "SELECT 1 FROM TB_PESSOA_AREA_CUIDADO WHERE CD_PESSOA_ACOMPANHADA = ? AND CD_AREA = ?";
+        try (Connection c = dataSource.getConnection(); PreparedStatement s = c.prepareStatement(sql)) {
+            s.setLong(1, pessoaId);
+            s.setLong(2, areaId);
+            try (ResultSet r = s.executeQuery()) { return r.next(); }
+        } catch (SQLException e) { throw traduzir(e); }
+    }
     private final DataSource dataSource;
     public RegistroCuidadoDAO(DataSource dataSource) { this.dataSource = dataSource; }
     private static final String COLUNAS = "CD_REGISTRO, CD_PESSOA_ACOMPANHADA, CD_AREA, CD_USUARIO_CRIOU, CD_USUARIO_REALIZOU, CD_MEDICAMENTO, CD_CONSULTA, DS_TITULO, DS_DETALHE, DT_PREVISTA, DT_REALIZADO, ST_REGISTRO, VL_MEDIDA, VL_MEDIDA_2, DS_UNIDADE";
