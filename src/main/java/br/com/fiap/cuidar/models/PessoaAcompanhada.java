@@ -1,9 +1,8 @@
-package br.com.fiap.cuidar.dto;
+package br.com.fiap.cuidar.models;
 
 import java.time.LocalDate;
-import jakarta.validation.constraints.*;
 
-public class PessoaIdosaResponse {
+public class PessoaAcompanhada {
     private Long id;
 
     private Long usuarioId;

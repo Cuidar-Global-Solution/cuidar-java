@@ -1,13 +1,13 @@
 package br.com.fiap.cuidar;
 
-import br.com.fiap.cuidar.controller.PessoaIdosaController;
-import br.com.fiap.cuidar.dao.PessoaIdosaDAO;
+import br.com.fiap.cuidar.controller.PessoaAcompanhadaController;
+import br.com.fiap.cuidar.dao.PessoaAcompanhadaDAO;
 import br.com.fiap.cuidar.exception.ConflitoException;
 import br.com.fiap.cuidar.exception.PersistenciaException;
 import br.com.fiap.cuidar.handler.GlobalExceptionHandler;
-import br.com.fiap.cuidar.mapper.PessoaIdosaMapper;
-import br.com.fiap.cuidar.models.PessoaIdosa;
-import br.com.fiap.cuidar.service.PessoaIdosaService;
+import br.com.fiap.cuidar.mapper.PessoaAcompanhadaMapper;
+import br.com.fiap.cuidar.models.PessoaAcompanhada;
+import br.com.fiap.cuidar.service.PessoaAcompanhadaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
@@ -23,8 +23,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-class PessoaIdosaCrudTests {
-    private PessoaIdosaDAO dao;
+class PessoaAcompanhadaCrudTests {
+    private PessoaAcompanhadaDAO dao;
     private MockMvc mvc;
     private static final String JSON = """
             {"usuarioId":null,"nome":"Maria","dataNascimento":"1950-01-02",
@@ -33,39 +33,55 @@ class PessoaIdosaCrudTests {
 
     @BeforeEach
     void configurar() {
-        dao = mock(PessoaIdosaDAO.class);
+        dao = mock(PessoaAcompanhadaDAO.class);
         var validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mvc = MockMvcBuilders.standaloneSetup(new PessoaIdosaController(
-                new PessoaIdosaService(dao), new PessoaIdosaMapper(new ModelMapper())))
+        mvc = MockMvcBuilders.standaloneSetup(new PessoaAcompanhadaController(
+                new PessoaAcompanhadaService(dao), new PessoaAcompanhadaMapper(new ModelMapper())))
                 .setControllerAdvice(new GlobalExceptionHandler()).setValidator(validator).build();
     }
 
     @Test
     void cadastrarRetornaIdGeradoLocationECamposOpcionais() throws Exception {
         when(dao.cadastrar(any())).thenAnswer(invocation -> {
-            PessoaIdosa pessoa = invocation.getArgument(0);
+            PessoaAcompanhada pessoa = invocation.getArgument(0);
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getId());
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getUsuarioId());
             pessoa.setId(42L);
             return pessoa;
         });
-        mvc.perform(post("/idosos").contentType(MediaType.APPLICATION_JSON).content(JSON))
-                .andExpect(status().isCreated()).andExpect(header().string("Location", "http://localhost/idosos/42"))
+        mvc.perform(post("/pessoas-acompanhadas").contentType(MediaType.APPLICATION_JSON).content(JSON))
+                .andExpect(status().isCreated()).andExpect(header().string("Location", "http://localhost/pessoas-acompanhadas/42"))
                 .andExpect(jsonPath("$.id").value(42)).andExpect(jsonPath("$.nome").value("Maria"))
                 .andExpect(jsonPath("$.usuarioId").isEmpty()).andExpect(jsonPath("$.observacao").isEmpty());
     }
 
     @Test
+    void cadastrarPessoaJovemPreservaDataNascimentoSemIdadeMinima() throws Exception {
+        String dataNascimento = java.time.LocalDate.now().minusYears(10).toString();
+        when(dao.cadastrar(any())).thenAnswer(invocation -> {
+            PessoaAcompanhada pessoa = invocation.getArgument(0);
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    java.time.LocalDate.parse(dataNascimento), pessoa.getDataNascimento());
+            pessoa.setId(42L);
+            return pessoa;
+        });
+        mvc.perform(post("/pessoas-acompanhadas").contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.replace("1950-01-02", dataNascimento)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.dataNascimento").value(dataNascimento));
+    }
+
+    @Test
     void vinculoOpcionalNaoSeConfundeComIdDaPessoa() throws Exception {
         when(dao.cadastrar(any())).thenAnswer(invocation -> {
-            PessoaIdosa pessoa = invocation.getArgument(0);
+            PessoaAcompanhada pessoa = invocation.getArgument(0);
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getId());
             org.junit.jupiter.api.Assertions.assertEquals(7L, pessoa.getUsuarioId());
             pessoa.setId(42L);
             return pessoa;
         });
-        mvc.perform(post("/idosos").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/pessoas-acompanhadas").contentType(MediaType.APPLICATION_JSON)
                 .content(JSON.replace("\"usuarioId\":null", "\"usuarioId\":7")))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.usuarioId").value(7));
@@ -73,44 +89,44 @@ class PessoaIdosaCrudTests {
 
     @Test
     void listarBuscarAtualizarEExcluir() throws Exception {
-        var pessoa = new PessoaIdosa();
+        var pessoa = new PessoaAcompanhada();
         pessoa.setId(42L);
         when(dao.listar()).thenReturn(List.of(pessoa));
         when(dao.buscarPorId(42L)).thenReturn(Optional.of(pessoa));
         when(dao.atualizar(any())).thenReturn(true);
         when(dao.excluir(42L)).thenReturn(true);
-        mvc.perform(get("/idosos")).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(42));
-        mvc.perform(get("/idosos/42")).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(42));
-        mvc.perform(put("/idosos/42").contentType(MediaType.APPLICATION_JSON).content(JSON))
+        mvc.perform(get("/pessoas-acompanhadas")).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(42));
+        mvc.perform(get("/pessoas-acompanhadas/42")).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(42));
+        mvc.perform(put("/pessoas-acompanhadas/42").contentType(MediaType.APPLICATION_JSON).content(JSON))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.nome").value("Maria"));
-        mvc.perform(delete("/idosos/42")).andExpect(status().isNoContent()).andExpect(content().string(""));
+        mvc.perform(delete("/pessoas-acompanhadas/42")).andExpect(status().isNoContent()).andExpect(content().string(""));
     }
 
     @Test
     void inexistentesRetornam404() throws Exception {
         when(dao.buscarPorId(99L)).thenReturn(Optional.empty());
-        mvc.perform(get("/idosos/99")).andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
-        mvc.perform(put("/idosos/99").contentType(MediaType.APPLICATION_JSON).content(JSON))
+        mvc.perform(get("/pessoas-acompanhadas/99")).andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
+        mvc.perform(put("/pessoas-acompanhadas/99").contentType(MediaType.APPLICATION_JSON).content(JSON))
                 .andExpect(status().isNotFound());
-        mvc.perform(delete("/idosos/99")).andExpect(status().isNotFound());
+        mvc.perform(delete("/pessoas-acompanhadas/99")).andExpect(status().isNotFound());
     }
 
     @Test
     void entradaInvalidaJsonMalformadoEIdInvalidoRetornam400() throws Exception {
-        mvc.perform(post("/idosos").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/pessoas-acompanhadas").contentType(MediaType.APPLICATION_JSON)
                 .content(JSON.replace("Maria", " ").replace("18", "33").replace("\"S\"", "\"X\"")))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detalhes.length()").value(3));
-        mvc.perform(post("/idosos").contentType(MediaType.APPLICATION_JSON).content("{"))
+        mvc.perform(post("/pessoas-acompanhadas").contentType(MediaType.APPLICATION_JSON).content("{"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
-        mvc.perform(get("/idosos/abc")).andExpect(status().isBadRequest());
-        mvc.perform(get("/idosos/0")).andExpect(status().isBadRequest());
+        mvc.perform(get("/pessoas-acompanhadas/abc")).andExpect(status().isBadRequest());
+        mvc.perform(get("/pessoas-acompanhadas/0")).andExpect(status().isBadRequest());
         verifyNoInteractions(dao);
     }
 
     @Test
     void metodoNaoPermitidoRetorna405JsonEAllow() throws Exception {
-        mvc.perform(patch("/idosos/42").contentType(MediaType.APPLICATION_JSON).content(JSON))
+        mvc.perform(patch("/pessoas-acompanhadas/42").contentType(MediaType.APPLICATION_JSON).content(JSON))
                 .andExpect(status().isMethodNotAllowed()).andExpect(jsonPath("$.status").value(405))
                 .andExpect(header().exists("Allow")).andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
@@ -118,12 +134,12 @@ class PessoaIdosaCrudTests {
     @Test
     void conflitoEFalhaInternaNaoExpoemSql() throws Exception {
         when(dao.excluir(42L)).thenThrow(new ConflitoException(
-                "A pessoa idosa possui registros relacionados e não pode ser removida.",
-                new SQLException("DELETE FROM TB_PESSOA_IDOSA")));
-        mvc.perform(delete("/idosos/42")).andExpect(status().isConflict())
+                "A pessoa acompanhada possui registros relacionados e não pode ser removida.",
+                new SQLException("DELETE FROM TB_PESSOA_ACOMPANHADA")));
+        mvc.perform(delete("/pessoas-acompanhadas/42")).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409)).andExpect(jsonPath("$.trace").doesNotExist());
         when(dao.listar()).thenThrow(new PersistenciaException(new SQLException("SELECT segredo")));
-        mvc.perform(get("/idosos")).andExpect(status().isInternalServerError())
+        mvc.perform(get("/pessoas-acompanhadas")).andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.mensagem").value("Erro interno ao processar a requisição."))
                 .andExpect(jsonPath("$.detalhes").isEmpty());
     }

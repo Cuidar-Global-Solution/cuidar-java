@@ -1,9 +1,9 @@
 package br.com.fiap.cuidar.controller;
 
-import br.com.fiap.cuidar.dto.PessoaIdosaRequest;
-import br.com.fiap.cuidar.dto.PessoaIdosaResponse;
-import br.com.fiap.cuidar.mapper.PessoaIdosaMapper;
-import br.com.fiap.cuidar.service.PessoaIdosaService;
+import br.com.fiap.cuidar.dto.PessoaAcompanhadaRequest;
+import br.com.fiap.cuidar.dto.PessoaAcompanhadaResponse;
+import br.com.fiap.cuidar.mapper.PessoaAcompanhadaMapper;
+import br.com.fiap.cuidar.service.PessoaAcompanhadaService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
@@ -13,18 +13,18 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/idosos")
-public class PessoaIdosaController {
-    private final PessoaIdosaService service;
-    private final PessoaIdosaMapper mapper;
+@RequestMapping("/pessoas-acompanhadas")
+public class PessoaAcompanhadaController {
+    private final PessoaAcompanhadaService service;
+    private final PessoaAcompanhadaMapper mapper;
 
-    public PessoaIdosaController(PessoaIdosaService service, PessoaIdosaMapper mapper) {
+    public PessoaAcompanhadaController(PessoaAcompanhadaService service, PessoaAcompanhadaMapper mapper) {
         this.service = service;
         this.mapper = mapper;
     }
 
     @PostMapping
-    public ResponseEntity<PessoaIdosaResponse> cadastrar(@Valid @RequestBody PessoaIdosaRequest request) {
+    public ResponseEntity<PessoaAcompanhadaResponse> cadastrar(@Valid @RequestBody PessoaAcompanhadaRequest request) {
         var pessoa = service.cadastrar(mapper.toEntity(request));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(pessoa.getId()).toUri();
@@ -32,18 +32,18 @@ public class PessoaIdosaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PessoaIdosaResponse>> listar() {
+    public ResponseEntity<List<PessoaAcompanhadaResponse>> listar() {
         return ResponseEntity.ok(service.listar().stream().map(mapper::toResponse).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PessoaIdosaResponse> buscarPorId(@PathVariable @Positive Long id) {
+    public ResponseEntity<PessoaAcompanhadaResponse> buscarPorId(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(mapper.toResponse(service.buscarPorId(id)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PessoaIdosaResponse> atualizar(@PathVariable @Positive Long id,
-                                                        @Valid @RequestBody PessoaIdosaRequest request) {
+    public ResponseEntity<PessoaAcompanhadaResponse> atualizar(@PathVariable @Positive Long id,
+                                                        @Valid @RequestBody PessoaAcompanhadaRequest request) {
         return ResponseEntity.ok(mapper.toResponse(service.atualizar(id, mapper.toEntity(request))));
     }
 

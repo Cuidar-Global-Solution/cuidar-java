@@ -1,24 +1,32 @@
-package br.com.fiap.cuidar.models;
+package br.com.fiap.cuidar.dto;
 
 import java.time.LocalDate;
+import jakarta.validation.constraints.*;
 
-public class PessoaIdosa {
-    private Long id;
-
+public class PessoaAcompanhadaRequest {
+    @Positive
+    @Max(9999999999L)
     private Long usuarioId;
 
+    @NotBlank
+    @Size(max = 100)
     private String nome;
 
+    @NotNull
+    @PastOrPresent
     private LocalDate dataNascimento;
 
+    @Size(max = 300)
     private String observacao;
 
+    @NotNull
+    @Min(12)
+    @Max(32)
     private Integer tamanhoFonte;
 
+    @NotNull
+    @Pattern(regexp = "[SN]", message = "deve ser S ou N")
     private String altoContraste;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public Long getUsuarioId() { return usuarioId; }
     public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }

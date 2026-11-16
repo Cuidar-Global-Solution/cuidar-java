@@ -2,7 +2,8 @@ package br.com.fiap.cuidar.handler;
 
 import br.com.fiap.cuidar.dto.ErroResponse;
 import br.com.fiap.cuidar.exception.ConflitoException;
-import br.com.fiap.cuidar.exception.PessoaIdosaNaoEncontradaException;
+import br.com.fiap.cuidar.exception.AreaCuidadoNaoEncontradaException;
+import br.com.fiap.cuidar.exception.PessoaAcompanhadaNaoEncontradaException;
 import org.springframework.http.*;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,8 +16,13 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
-    @ExceptionHandler(PessoaIdosaNaoEncontradaException.class)
-    public ResponseEntity<Object> naoEncontrada(PessoaIdosaNaoEncontradaException e, WebRequest request) {
+    @ExceptionHandler(AreaCuidadoNaoEncontradaException.class)
+    public ResponseEntity<Object> areaNaoEncontrada(AreaCuidadoNaoEncontradaException e, WebRequest request) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage(), List.of(), new HttpHeaders(), request);
+    }
+
+    @ExceptionHandler(PessoaAcompanhadaNaoEncontradaException.class)
+    public ResponseEntity<Object> naoEncontrada(PessoaAcompanhadaNaoEncontradaException e, WebRequest request) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage(), List.of(), new HttpHeaders(), request);
     }
 

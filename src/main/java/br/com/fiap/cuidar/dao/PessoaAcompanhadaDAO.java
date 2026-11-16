@@ -2,7 +2,7 @@ package br.com.fiap.cuidar.dao;
 
 import br.com.fiap.cuidar.exception.ConflitoException;
 import br.com.fiap.cuidar.exception.PersistenciaException;
-import br.com.fiap.cuidar.models.PessoaIdosa;
+import br.com.fiap.cuidar.models.PessoaAcompanhada;
 import org.springframework.stereotype.Repository;
 import javax.sql.DataSource;
 import java.sql.*;
@@ -11,18 +11,18 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public class PessoaIdosaDAO {
-    private static final String COLUNAS = "CD_PESSOA_IDOSA, CD_USUARIO, NM_PESSOA, DT_NASCIMENTO, DS_OBSERVACAO, NR_TAMANHO_FONTE, FL_ALTO_CONTRASTE";
+public class PessoaAcompanhadaDAO {
+    private static final String COLUNAS = "CD_PESSOA_ACOMPANHADA, CD_USUARIO, NM_PESSOA, DT_NASCIMENTO, DS_OBSERVACAO, NR_TAMANHO_FONTE, FL_ALTO_CONTRASTE";
     private final DataSource dataSource;
 
-    public PessoaIdosaDAO(DataSource dataSource) { this.dataSource = dataSource; }
+    public PessoaAcompanhadaDAO(DataSource dataSource) { this.dataSource = dataSource; }
 
-    public PessoaIdosa cadastrar(PessoaIdosa pessoa) {
-        String sql = "INSERT INTO TB_PESSOA_IDOSA (" + COLUNAS
-                + ") VALUES (SQ_TB_PESSOA_IDOSA.NEXTVAL, ?, ?, ?, ?, ?, ?)";
+    public PessoaAcompanhada cadastrar(PessoaAcompanhada pessoa) {
+        String sql = "INSERT INTO TB_PESSOA_ACOMPANHADA (" + COLUNAS
+                + ") VALUES (SQ_TB_PESSOA_ACOMPANHADA.NEXTVAL, ?, ?, ?, ?, ?, ?)";
         // Informar a coluna evita que o driver Oracle retorne apenas o ROWID.
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, new String[]{"CD_PESSOA_IDOSA"})) {
+             PreparedStatement statement = connection.prepareStatement(sql, new String[]{"CD_PESSOA_ACOMPANHADA"})) {
             preencher(statement, pessoa);
             statement.executeUpdate();
             try (ResultSet keys = statement.getGeneratedKeys()) {
@@ -33,19 +33,19 @@ public class PessoaIdosaDAO {
         } catch (SQLException e) { throw traduzir(e); }
     }
 
-    public List<PessoaIdosa> listar() {
-        String sql = "SELECT " + COLUNAS + " FROM TB_PESSOA_IDOSA ORDER BY CD_PESSOA_IDOSA";
+    public List<PessoaAcompanhada> listar() {
+        String sql = "SELECT " + COLUNAS + " FROM TB_PESSOA_ACOMPANHADA ORDER BY CD_PESSOA_ACOMPANHADA";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet result = statement.executeQuery()) {
-            List<PessoaIdosa> pessoas = new ArrayList<>();
+            List<PessoaAcompanhada> pessoas = new ArrayList<>();
             while (result.next()) { pessoas.add(ler(result)); }
             return pessoas;
         } catch (SQLException e) { throw traduzir(e); }
     }
 
-    public Optional<PessoaIdosa> buscarPorId(Long id) {
-        String sql = "SELECT " + COLUNAS + " FROM TB_PESSOA_IDOSA WHERE CD_PESSOA_IDOSA = ?";
+    public Optional<PessoaAcompanhada> buscarPorId(Long id) {
+        String sql = "SELECT " + COLUNAS + " FROM TB_PESSOA_ACOMPANHADA WHERE CD_PESSOA_ACOMPANHADA = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
@@ -55,11 +55,11 @@ public class PessoaIdosaDAO {
         } catch (SQLException e) { throw traduzir(e); }
     }
 
-    public boolean atualizar(PessoaIdosa pessoa) {
+    public boolean atualizar(PessoaAcompanhada pessoa) {
         String sql = """
-                UPDATE TB_PESSOA_IDOSA SET CD_USUARIO = ?, NM_PESSOA = ?, DT_NASCIMENTO = ?,
+                UPDATE TB_PESSOA_ACOMPANHADA SET CD_USUARIO = ?, NM_PESSOA = ?, DT_NASCIMENTO = ?,
                 DS_OBSERVACAO = ?, NR_TAMANHO_FONTE = ?, FL_ALTO_CONTRASTE = ?
-                WHERE CD_PESSOA_IDOSA = ?
+                WHERE CD_PESSOA_ACOMPANHADA = ?
                 """;
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -72,13 +72,13 @@ public class PessoaIdosaDAO {
     public boolean excluir(Long id) {
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(
-                     "DELETE FROM TB_PESSOA_IDOSA WHERE CD_PESSOA_IDOSA = ?")) {
+                     "DELETE FROM TB_PESSOA_ACOMPANHADA WHERE CD_PESSOA_ACOMPANHADA = ?")) {
             statement.setLong(1, id);
             return statement.executeUpdate() > 0;
         } catch (SQLException e) { throw traduzir(e); }
     }
 
-    private void preencher(PreparedStatement statement, PessoaIdosa pessoa) throws SQLException {
+    private void preencher(PreparedStatement statement, PessoaAcompanhada pessoa) throws SQLException {
         if (pessoa.getUsuarioId() == null) { statement.setNull(1, Types.NUMERIC); }
         else { statement.setLong(1, pessoa.getUsuarioId()); }
         statement.setString(2, pessoa.getNome());
@@ -89,9 +89,9 @@ public class PessoaIdosaDAO {
         statement.setString(6, pessoa.getAltoContraste());
     }
 
-    private PessoaIdosa ler(ResultSet result) throws SQLException {
-        PessoaIdosa pessoa = new PessoaIdosa();
-        pessoa.setId(result.getLong("CD_PESSOA_IDOSA"));
+    private PessoaAcompanhada ler(ResultSet result) throws SQLException {
+        PessoaAcompanhada pessoa = new PessoaAcompanhada();
+        pessoa.setId(result.getLong("CD_PESSOA_ACOMPANHADA"));
         long usuarioId = result.getLong("CD_USUARIO");
         pessoa.setUsuarioId(result.wasNull() ? null : usuarioId);
         pessoa.setNome(result.getString("NM_PESSOA"));
@@ -106,11 +106,11 @@ public class PessoaIdosaDAO {
         for (SQLException atual = e; atual != null; atual = atual.getNextException()) {
             switch (atual.getErrorCode()) {
                 case 1:
-                    return new ConflitoException("O usuário já está vinculado a outra pessoa idosa.", e);
+                    return new ConflitoException("O usuário já está vinculado a outra pessoa acompanhada.", e);
                 case 2291:
                     return new ConflitoException("O usuário informado não existe.", e);
                 case 2292:
-                    return new ConflitoException("A pessoa idosa possui registros relacionados e não pode ser removida.", e);
+                    return new ConflitoException("A pessoa acompanhada possui registros relacionados e não pode ser removida.", e);
                 default:
                     break;
             }
