@@ -16,6 +16,11 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(br.com.fiap.cuidar.exception.RegistroCuidadoNaoEncontradoException.class)
+    public ResponseEntity<Object> registroNaoEncontrado(
+            br.com.fiap.cuidar.exception.RegistroCuidadoNaoEncontradoException e, WebRequest request) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage(), List.of(), new HttpHeaders(), request);
+    }
     @ExceptionHandler(AreaCuidadoNaoEncontradaException.class)
     public ResponseEntity<Object> areaNaoEncontrada(AreaCuidadoNaoEncontradaException e, WebRequest request) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage(), List.of(), new HttpHeaders(), request);
