@@ -4,6 +4,9 @@ import br.com.fiap.cuidar.dto.ErroResponse;
 import br.com.fiap.cuidar.exception.ConflitoException;
 import br.com.fiap.cuidar.exception.AreaCuidadoNaoEncontradaException;
 import br.com.fiap.cuidar.exception.PessoaAcompanhadaNaoEncontradaException;
+import br.com.fiap.cuidar.exception.PersistenciaException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,11 +14,43 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.HandlerMapping;
+import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(PersistenciaException.class)
+    public ResponseEntity<Object> persistencia(PersistenciaException e, WebRequest request) {
+        var servletRequest = ((ServletWebRequest) request).getRequest();
+        Object rota = servletRequest.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        Throwable causa = e.getCause();
+        SQLException sqlException = null;
+        Set<Throwable> visitadas = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Throwable atual = causa; atual != null && visitadas.add(atual); atual = atual.getCause()) {
+            if (atual instanceof SQLException sql) {
+                sqlException = sql;
+                break;
+            }
+        }
+        String tipo = causa == null ? "ausente" : causa.getClass().getName();
+        if (sqlException == null) {
+            LOG.error("Falha de persistencia: metodo={} rota={} causa={}",
+                    servletRequest.getMethod(), rota == null ? "desconhecida" : rota, tipo);
+        } else {
+            LOG.error("Falha de persistencia: metodo={} rota={} causa={} codigoFornecedor={} SQLState={}",
+                    servletRequest.getMethod(), rota == null ? "desconhecida" : rota, tipo,
+                    sqlException.getErrorCode(), sqlException.getSQLState());
+        }
+        return resposta(HttpStatus.INTERNAL_SERVER_ERROR, mensagem(HttpStatus.INTERNAL_SERVER_ERROR),
+                List.of(), new HttpHeaders(), request);
+    }
     @ExceptionHandler(br.com.fiap.cuidar.exception.AreaCuidadoNaoHabilitadaException.class)
     public ResponseEntity<Object> areaNaoHabilitada(
             br.com.fiap.cuidar.exception.AreaCuidadoNaoHabilitadaException e, WebRequest request) {

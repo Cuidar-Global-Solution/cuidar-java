@@ -2,6 +2,7 @@ package br.com.fiap.cuidar;
 
 import br.com.fiap.cuidar.dao.PessoaAcompanhadaDAO;
 import br.com.fiap.cuidar.exception.ConflitoException;
+import br.com.fiap.cuidar.exception.PersistenciaException;
 import br.com.fiap.cuidar.models.PessoaAcompanhada;
 import org.junit.jupiter.api.Test;
 import javax.sql.DataSource;
@@ -12,6 +13,16 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PessoaAcompanhadaDAOTests {
+    @Test
+    void falhaDeConexaoPreservaCausaOriginal() throws Exception {
+        DataSource ds = mock(DataSource.class);
+        SQLException causa = new SQLException("dados privados", "08001", 17002);
+        when(ds.getConnection()).thenThrow(causa);
+        PersistenciaException erro = assertThrows(PersistenciaException.class,
+                () -> new PessoaAcompanhadaDAO(ds).listar());
+        assertSame(causa, erro.getCause());
+    }
+
     @Test
     void gravarNulosRecuperarIdEFecharRecursos() throws Exception {
         DataSource ds = mock(DataSource.class);

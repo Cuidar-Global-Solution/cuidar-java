@@ -10,6 +10,10 @@ import br.com.fiap.cuidar.models.PessoaAcompanhada;
 import br.com.fiap.cuidar.service.PessoaAcompanhadaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,11 +23,41 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class PessoaAcompanhadaCrudTests {
+    @Test
+    void logDePersistenciaUsaRotaEArgumentosSeguros() throws Exception {
+        Logger logger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            SQLException sql = new SQLException("SQL e credenciais secretas", "08001", 17002);
+            when(dao.buscarPorId(42L)).thenThrow(new PersistenciaException(new IllegalStateException("segredo", sql)));
+            mvc.perform(get("/pessoas-acompanhadas/42?token=segredo"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.mensagem").value("Erro interno ao processar a requisição."))
+                    .andExpect(jsonPath("$.detalhes").isEmpty());
+            assertEquals(1, appender.list.size());
+            ILoggingEvent evento = appender.list.get(0);
+            String log = evento.getFormattedMessage();
+            assertTrue(log.contains("metodo=GET"));
+            assertTrue(log.contains("rota=/pessoas-acompanhadas/{id}"));
+            assertTrue(log.contains("causa=java.lang.IllegalStateException"));
+            assertTrue(log.contains("codigoFornecedor=17002"));
+            assertTrue(log.contains("SQLState=08001"));
+            assertFalse(log.contains("segredo"));
+            assertNull(evento.getThrowableProxy());
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
     private PessoaAcompanhadaDAO dao;
     private MockMvc mvc;
     private static final String JSON = """
