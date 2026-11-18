@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <img src="./docs/assets/cuidar-banner.svg" alt="Cuidar+ — Todo cuidado em uma só plataforma. API Java para a rotina de cuidados da pessoa idosa." width="100%">
+  <img src="./docs/assets/cuidar-banner.svg" alt="Cuidar+ — Todo cuidado em uma só plataforma. API Java para a rotina de cuidados da pessoa acompanhada." width="100%">
 </p>
 
 <p align="center">
@@ -20,23 +20,21 @@
   <a href="#equipe">Equipe</a>
 </p>
 
+</div>
+
 ## O projeto
 
-O **Cuidar+** organiza a rotina de cuidados da pessoa idosa e a colaboração entre familiares e cuidadores. Este repositório contém a API Java da solução, desenvolvida para a **Global Solution 2026/2 da FIAP**, com o tema CitizenTech.
-
-O primeiro recurso implementado é **PessoaIdosa**: cadastro, consulta, atualização e exclusão da pessoa acompanhada, com vínculo opcional à sua própria conta de usuário e preferências de acessibilidade.
+O **Cuidar+** organiza a rotina de cuidados da pessoa acompanhada e a colaboração entre familiares e cuidadores. Este repositório contém a API Java da solução, desenvolvida para a **Global Solution 2026/2 da FIAP**, com o tema CitizenTech.
 
 ## Estado atual
 
-| Implementado | Próximas etapas |
-| :---: | :---: |
-| CRUD de PessoaIdosa com cinco endpoints | Script de tabelas e sequences |
-| DTOs, Bean Validation e ModelMapper | Configuração e validação no Oracle da FIAP |
-| DAO com JDBC e parâmetros preparados | Demais entidades e relacionamento 1:N |
-| Erros padronizados em JSON | CORS e integração com o front-end |
-| Testes HTTP e de acesso a dados com mocks | Docker, Render e documentação de entrega |
+A entrega inclui os CRUDs de **PessoaAcompanhada**, **AreaCuidado** e **RegistroCuidado**, com persistência JDBC no Oracle. A API usa Docker no Render e integra-se ao dashboard familiar, publicado na Vercel.
 
-> **A API ainda depende da configuração do Oracle para iniciar e atender requisições.** A compilação e os testes específicos abaixo podem ser executados sem banco. O script SQL, as credenciais e a configuração da conexão ainda não fazem parte desta etapa.
+- [API no Render](https://cuidar-java.onrender.com/pessoas-acompanhadas)
+- [Dashboard familiar na Vercel](https://cuidar-front.vercel.app/dashboard/familiar)
+
+Na validação da entrega, os três CRUDs foram testados pelo Postman na API publicada. A tentativa de gravar um registro com uma área sem vínculo retornou `409 Conflict`. Pelo dashboard, a listagem de pessoas acompanhadas retornou `200 OK` e o cadastro retornou `201 Created`.
+
 
 ## Arquitetura
 
@@ -68,37 +66,70 @@ A organização usa o [cineFiap da professora Eliane Marion](https://github.com/
 
 ## Executar
 
-**Pré-requisitos:** JDK 21 e acesso à internet no primeiro uso do Maven Wrapper.
+### Preparar o Oracle
 
-Na raiz do projeto, pelo PowerShell:
+1. No Oracle SQL Developer, conecte-se a um schema vazio com permissão para criar tabelas e sequences.
+2. Use **Arquivo → Abrir** para abrir [`docs/sql/cuidar-schema.sql`](./docs/sql/cuidar-schema.sql) e selecione a conexão do schema na planilha SQL.
+3. Pressione **F5 (Executar Script)** para executar o arquivo inteiro. Confira a saída do script para identificar eventuais erros de criação.
 
-~~~powershell
-# Compilar sem executar testes
-.\mvnw.cmd -DskipTests compile
+A execução desse arquivo em um schema vazio ainda precisa ser validada. Para testar registros de cuidado, cadastre a pessoa acompanhada, a área e o usuário criador. Se informar usuário executor, medicamento ou consulta, cadastre também essas referências. Habilite a área para a pessoa inserindo o par em `TB_PESSOA_AREA_CUIDADO` e confirme os dados com `COMMIT` antes de chamar a API.
 
-# Executar somente os testes do CRUD, sem Oracle
-.\mvnw.cmd "-Dtest=PessoaIdosaCrudTests,PessoaIdosaDAOTests" test
-~~~
+### Rodar a API no Windows
 
-Depois da configuração da conexão e da criação das tabelas e sequences:
+Use o JDK 21 e tenha acesso à internet no primeiro uso do Maven Wrapper. Configure as variáveis na sessão do PowerShell antes de iniciar a API.
+
+| Variável de ambiente | Valor esperado |
+| --- | --- |
+| `SPRING_DATASOURCE_URL` | URL JDBC do Oracle no formato `jdbc:oracle:thin:@//HOST:PORTA/SERVICO` |
+| `SPRING_DATASOURCE_USERNAME` | Usuário do schema Oracle |
+| `SPRING_DATASOURCE_PASSWORD` | Senha do usuário Oracle, definida fora dos arquivos versionados |
+| `CUIDAR_CORS_ALLOWED_ORIGINS` | Origens exatas separadas por vírgula, sem curingas ou caminhos. Para o dashboard publicado, use `https://cuidar-front.vercel.app`. O padrão vazio bloqueia requisições de outras origens no navegador. |
+
+Na raiz do projeto, execute pelo PowerShell.
 
 ~~~powershell
 .\mvnw.cmd spring-boot:run
 ~~~
 
-O endereço local padrão será `http://localhost:8080`. A conexão deverá ser fornecida externamente; não inclua usuário ou senha do banco no código versionado.
+A API local fica disponível em `http://localhost:8080`. O `Dockerfile` gera o JAR com o Maven Wrapper em uma etapa com JDK 21 e o executa com JRE 21. No contêiner, a variável `PORT` define a porta HTTP e assume `8080` por padrão.
 
 ## Contrato da API
 
-| Método | Rota | Sucesso |
-| :---: | :---: | :---: |
-| `POST` | `/idosos` | `201 Created` + `Location` + pessoa cadastrada |
-| `GET` | `/idosos` | `200 OK` + lista |
-| `GET` | `/idosos/{id}` | `200 OK` + pessoa |
-| `PUT` | `/idosos/{id}` | `200 OK` + pessoa atualizada |
-| `DELETE` | `/idosos/{id}` | `204 No Content` |
+| Recurso | Rota de coleção | Rota de item |
+| --- | --- | --- |
+| `PessoaAcompanhada` | `/pessoas-acompanhadas` | `/pessoas-acompanhadas/{id}` |
+| `AreaCuidado` | `/areas-cuidado` | `/areas-cuidado/{id}` |
+| `RegistroCuidado` | `/registros-cuidado` | `/registros-cuidado/{id}` |
 
-**Corpo de entrada para POST e PUT**
+| Método | Tipo de rota | Sucesso |
+| --- | --- | --- |
+| `GET` | Coleção | `200 OK` com a lista |
+| `POST` | Coleção | `201 Created` com o recurso criado e o cabeçalho `Location` |
+| `GET` | Item | `200 OK` com o recurso |
+| `PUT` | Item | `200 OK` com o recurso atualizado |
+| `DELETE` | Item | `204 No Content` |
+
+Os IDs das rotas são positivos. As respostas de cadastro, consulta de item e atualização incluem o `id` do recurso. No `PUT`, o ID do recurso atualizado vem da rota.
+
+### Registros por pessoa acompanhada
+
+| Método | Rota | Sucesso |
+| --- | --- | --- |
+| `GET` | `/pessoas-acompanhadas/{id}/registros` | `200 OK` com os registros da pessoa |
+| `POST` | `/pessoas-acompanhadas/{id}/registros` | `201 Created` com o registro e `Location` apontando para `/registros-cuidado/{id}` com o ID do registro criado |
+
+No `POST` aninhado, o ID da pessoa vem da rota. Nos dois caminhos de cadastro e no `PUT /registros-cuidado/{id}`, a pessoa e a área precisam existir e o par precisa constar em `TB_PESSOA_AREA_CUIDADO`. Sem o vínculo, a API retorna `409 Conflict`.
+
+### PessoaAcompanhada
+
+| Campo | Regra para POST e PUT |
+| --- | --- |
+| `usuarioId` | Opcional. Positivo, até 10 dígitos. Referencia um usuário existente sem vínculo com outra pessoa acompanhada |
+| `nome` | Obrigatório, com conteúdo além de espaços e até 100 caracteres |
+| `dataNascimento` | Obrigatória, no formato `AAAA-MM-DD`, até a data atual e sem idade mínima |
+| `observacao` | Opcional, até 300 caracteres |
+| `tamanhoFonte` | Obrigatório, de 12 a 32 |
+| `altoContraste` | Obrigatório, `S` ou `N` |
 
 ~~~json
 {
@@ -111,39 +142,55 @@ O endereço local padrão será `http://localhost:8080`. A conexão deverá ser 
 }
 ~~~
 
-O ID é gerado no banco por `SQ_TB_PESSOA_IDOSA` e aparece como `id` na resposta, junto aos campos acima. No PUT, o ID vem da rota e os campos são substituídos pelos valores enviados.
+### AreaCuidado
 
-| Campo | Regra |
-| :---: | :---: |
-| `usuarioId` | Opcional; positivo e com até 10 dígitos. Deve referenciar um usuário existente e não vinculado a outra pessoa idosa |
-| `nome` | Obrigatório, não pode conter apenas espaços; até 100 caracteres |
-| `dataNascimento` | Obrigatória, no formato `AAAA-MM-DD`; não pode ser futura |
-| `observacao` | Opcional; até 300 caracteres |
-| `tamanhoFonte` | Obrigatório; de 12 a 32 |
-| `altoContraste` | Obrigatório; `S` ou `N` |
+| Campo | Regra para POST e PUT |
+| --- | --- |
+| `nome` | Obrigatório, único, com conteúdo além de espaços e até 50 caracteres |
+| `descricao` | Opcional, até 200 caracteres |
 
-**Erros**
+### RegistroCuidado
 
-`400` para entrada inválida · `404` para recurso inexistente · `405` para método não permitido · `409` para conflito de vínculo ou exclusão bloqueada por registros relacionados. Falhas inesperadas retornam `500` com mensagem genérica.
+| Campo | Regra para POST e PUT |
+| --- | --- |
+| `pessoaAcompanhadaId` | Obrigatório em `POST /registros-cuidado` e `PUT /registros-cuidado/{id}`. Positivo e com até 10 dígitos. No POST aninhado, use o ID na rota |
+| `areaId` | Obrigatório, positivo e com até 3 dígitos |
+| `usuarioCriouId` | Obrigatório, positivo e com até 10 dígitos |
+| `usuarioRealizouId`, `medicamentoId`, `consultaId` | Opcionais. Quando informados, devem ser positivos, ter até 10 dígitos e referenciar dados existentes |
+| `titulo` | Obrigatório, com conteúdo além de espaços e até 100 caracteres |
+| `detalhe` | Opcional, até 300 caracteres |
+| `dataPrevista`, `dataRealizado` | Pelo menos uma é obrigatória. Use data e hora ISO 8601 local, como `2026-11-18T09:00:00` |
+| `status` | Obrigatório. Aceita `PENDENTE`, `TOMADA`, `NAO_TOMADA`, `SEM_CONFIRMACAO` ou `CONCLUIDO` |
+| `medida`, `medida2` | Opcionais, com até 6 dígitos inteiros e 2 casas decimais |
+| `unidade` | Opcional, até 20 caracteres |
+
+### Erros
+
+A API retorna `400` para entrada inválida, `404` para recurso inexistente, `405` para método não permitido e `409` para conflitos, como área sem vínculo, nome de área duplicado ou exclusão bloqueada por referências. Falhas inesperadas retornam `500` com mensagem genérica.
 
 ~~~json
 {
   "timestamp": "2026-11-13T23:00:00Z",
   "status": 404,
   "erro": "Not Found",
-  "mensagem": "Pessoa idosa não encontrada.",
-  "caminho": "/idosos/99",
+  "mensagem": "Pessoa acompanhada não encontrada.",
+  "caminho": "/pessoas-acompanhadas/99",
   "detalhes": []
 }
 ~~~
 
-As respostas de erro não expõem SQL, credenciais ou stack trace.
-
 ## Testes
 
-Os **10 testes específicos do CRUD** verificam rotas, status HTTP, `Location`, validação, mapeamento, campos opcionais, tradução de conflitos Oracle e fechamento de recursos JDBC. Utilizam MockMvc e mocks do DAO ou dos objetos JDBC.
+Na raiz do projeto, execute a suíte pelo PowerShell.
 
-**Validação já realizada:** compilação com `release 21` e os 10 testes aprovados. Isso não substitui a integração com Oracle: execução do SQL, geração do ID pelo driver e restrições reais ainda precisam ser verificadas. O teste original `contextLoads` requer a configuração do contexto com banco e não faz parte do comando seletivo acima.
+~~~powershell
+.\mvnw.cmd test
+~~~
+
+A suíte cobre os três CRUDs, as rotas aninhadas, a regra de área habilitada, CORS, o carregamento do contexto Spring e o acesso JDBC com mocks. Os testes automatizados rodam sem uma instância Oracle.
+
+**Resultado da execução de 18/11/2026:** 48 testes executados com sucesso, sem falhas, erros ou testes ignorados.
+
 
 ## Equipe
 
@@ -160,12 +207,10 @@ Os **10 testes específicos do CRUD** verificam rotas, status HTTP, `Location`, 
 <details>
 <summary>Uso de IA no desenvolvimento</summary>
 
-O Codex foi utilizado como apoio à configuração do ModelMapper, implementação do CRUD de PessoaIdosa, criação e execução dos testes e elaboração deste README. A compilação e os testes automatizados foram usados para verificar a implementação; a validação no Oracle e a revisão técnica pelo grupo continuam pendentes.
+O Codex apoiou a configuração do ModelMapper, a implementação dos CRUDs, a criação e execução dos testes automatizados e a revisão deste README. A validação da entrega também incluiu testes manuais com Postman na API publicada e testes de listagem e cadastro pelo dashboard familiar.
 
 </details>
 
 ---
 
 <p align="center"><sub><strong>Cuidar+</strong> · Todo cuidado em uma só plataforma.</sub></p>
-
-</div>
