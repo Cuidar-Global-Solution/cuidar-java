@@ -20,7 +20,7 @@ class CorsConfigTests {
             request.addHeader("Access-Control-Request-Headers", requestedHeader);
         }
         MockHttpServletResponse response = new MockHttpServletResponse();
-        new CorsConfig().corsFilter(origins).doFilter(request, response,
+        new org.springframework.web.filter.CorsFilter(new CorsConfig(origins).configurationSource()).doFilter(request, response,
                 (req, res) -> ((MockHttpServletResponse) res).setStatus(204));
         return response;
     }
@@ -60,11 +60,20 @@ class CorsConfigTests {
         assertEquals(403, request("https://front.example", "https://front.example",
                 "OPTIONS", "PATCH", null).getStatus());
         assertEquals(403, request("https://front.example", "https://front.example",
-                "OPTIONS", "POST", "Authorization").getStatus());
+                "OPTIONS", "POST", "X-Inesperado").getStatus());
+    }
+
+    @Test
+    void permitsBearerPreflightWithoutCookies() throws Exception {
+        var response = request("https://front.example", "https://front.example",
+                "OPTIONS", "POST", "Authorization");
+        assertEquals(200, response.getStatus());
+        assertEquals("Authorization", response.getHeader("Access-Control-Allow-Headers"));
+        assertNull(response.getHeader("Access-Control-Allow-Credentials"));
     }
 
     @Test
     void rejectsWildcardConfiguration() {
-        assertThrows(IllegalArgumentException.class, () -> new CorsConfig().corsFilter("*"));
+        assertThrows(IllegalArgumentException.class, () -> new CorsConfig("*").configurationSource());
     }
 }

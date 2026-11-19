@@ -8,6 +8,7 @@ import br.com.fiap.cuidar.handler.GlobalExceptionHandler;
 import br.com.fiap.cuidar.mapper.PessoaAcompanhadaMapper;
 import br.com.fiap.cuidar.models.PessoaAcompanhada;
 import br.com.fiap.cuidar.service.PessoaAcompanhadaService;
+import br.com.fiap.cuidar.service.AcessoCuidado;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ch.qos.logback.classic.Logger;
@@ -70,14 +71,17 @@ class PessoaAcompanhadaCrudTests {
         dao = mock(PessoaAcompanhadaDAO.class);
         var validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
+        var acesso = mock(AcessoCuidado.class);
+        when(acesso.pessoasPermitidas()).thenReturn(java.util.Set.of(42L));
+        when(acesso.autorizarNovaPessoa(any())).thenReturn(1L);
         mvc = MockMvcBuilders.standaloneSetup(new PessoaAcompanhadaController(
-                new PessoaAcompanhadaService(dao), new PessoaAcompanhadaMapper(new ModelMapper())))
+                new PessoaAcompanhadaService(dao), new PessoaAcompanhadaMapper(new ModelMapper()), acesso))
                 .setControllerAdvice(new GlobalExceptionHandler()).setValidator(validator).build();
     }
 
     @Test
     void cadastrarRetornaIdGeradoLocationECamposOpcionais() throws Exception {
-        when(dao.cadastrar(any())).thenAnswer(invocation -> {
+        when(dao.cadastrarComFamiliar(any(), eq(1L))).thenAnswer(invocation -> {
             PessoaAcompanhada pessoa = invocation.getArgument(0);
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getId());
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getUsuarioId());
@@ -93,7 +97,7 @@ class PessoaAcompanhadaCrudTests {
     @Test
     void cadastrarPessoaJovemPreservaDataNascimentoSemIdadeMinima() throws Exception {
         String dataNascimento = java.time.LocalDate.now().minusYears(10).toString();
-        when(dao.cadastrar(any())).thenAnswer(invocation -> {
+        when(dao.cadastrarComFamiliar(any(), eq(1L))).thenAnswer(invocation -> {
             PessoaAcompanhada pessoa = invocation.getArgument(0);
             org.junit.jupiter.api.Assertions.assertEquals(
                     java.time.LocalDate.parse(dataNascimento), pessoa.getDataNascimento());
@@ -108,7 +112,7 @@ class PessoaAcompanhadaCrudTests {
 
     @Test
     void vinculoOpcionalNaoSeConfundeComIdDaPessoa() throws Exception {
-        when(dao.cadastrar(any())).thenAnswer(invocation -> {
+        when(dao.cadastrarComFamiliar(any(), eq(1L))).thenAnswer(invocation -> {
             PessoaAcompanhada pessoa = invocation.getArgument(0);
             org.junit.jupiter.api.Assertions.assertNull(pessoa.getId());
             org.junit.jupiter.api.Assertions.assertEquals(7L, pessoa.getUsuarioId());

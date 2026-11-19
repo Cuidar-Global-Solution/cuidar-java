@@ -8,7 +8,6 @@ public class RegistroCuidadoAninhadoRequest {
     @Positive
     @Max(999)
     private Long areaId;
-    @NotNull
     @Positive
     @Max(9999999999L)
     private Long usuarioCriouId;

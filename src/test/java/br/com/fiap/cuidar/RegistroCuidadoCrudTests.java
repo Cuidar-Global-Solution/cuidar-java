@@ -41,7 +41,9 @@ class RegistroCuidadoCrudTests {
         when(pessoas.buscarPorId(3L)).thenReturn(new PessoaAcompanhada());
         when(areas.buscarPorId(1L)).thenReturn(new AreaCuidado());
         when(dao.areaHabilitada(3L, 1L)).thenReturn(true);
-        var service = new RegistroCuidadoService(dao, pessoas, areas);
+        var acesso = mock(AcessoCuidado.class);
+        when(acesso.pessoasPermitidas()).thenReturn(Set.of(3L));
+        var service = new RegistroCuidadoService(dao, pessoas, areas, acesso);
         var mapper = new RegistroCuidadoMapper(new ModelMapper());
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
@@ -74,7 +76,7 @@ class RegistroCuidadoCrudTests {
 
     @Test
     void listarBuscarAtualizarExcluir() throws Exception {
-        var r = new RegistroCuidado(); r.setId(9L); r.setTitulo("Beber água");
+        var r = new RegistroCuidado(); r.setId(9L); r.setPessoaAcompanhadaId(3L); r.setTitulo("Beber água");
         when(dao.listar()).thenReturn(List.of(r));
         when(dao.buscarPorId(9L)).thenReturn(Optional.of(r));
         when(dao.atualizar(any())).thenReturn(true);

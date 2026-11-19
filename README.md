@@ -16,6 +16,7 @@
   <a href="#estado-atual">Estado atual</a> ·
   <a href="#executar">Execução</a> ·
   <a href="#contrato-da-api">API</a> ·
+  <a href="#autenticação">Autenticação</a> ·
   <a href="#testes">Testes</a> ·
   <a href="#equipe">Equipe</a>
 </p>
@@ -72,7 +73,7 @@ A organização usa o [cineFiap da professora Eliane Marion](https://github.com/
 2. Use **Arquivo → Abrir** para abrir [`docs/sql/cuidar-schema.sql`](./docs/sql/cuidar-schema.sql) e selecione a conexão do schema na planilha SQL.
 3. Pressione **F5 (Executar Script)** para executar o arquivo inteiro. Confira a saída do script para identificar eventuais erros de criação.
 
-A execução desse arquivo em um schema vazio ainda precisa ser validada. Para testar registros de cuidado, cadastre a pessoa acompanhada, a área e o usuário criador. Se informar usuário executor, medicamento ou consulta, cadastre também essas referências. Habilite a área para a pessoa inserindo o par em `TB_PESSOA_AREA_CUIDADO` e confirme os dados com `COMMIT` antes de chamar a API.
+Em seguida, execute o [script de autenticação](./docs/sql/cuidar-autenticacao.sql) na mesma conexão. A execução desses scripts em um schema vazio ainda precisa ser validada. Para testar registros de cuidado, cadastre a pessoa acompanhada, a área e o usuário criador. Se informar usuário executor, medicamento ou consulta, cadastre também essas referências. Habilite a área para a pessoa inserindo o par em `TB_PESSOA_AREA_CUIDADO` e confirme os dados com `COMMIT` antes de chamar a API.
 
 ### Rodar a API no Windows
 
@@ -92,6 +93,10 @@ Na raiz do projeto, execute pelo PowerShell.
 ~~~
 
 A API local fica disponível em `http://localhost:8080`. O `Dockerfile` gera o JAR com o Maven Wrapper em uma etapa com JDK 21 e o executa com JRE 21. No contêiner, a variável `PORT` define a porta HTTP e assume `8080` por padrão.
+
+## Autenticação
+
+O [guia de autenticação e deploy](./docs/autenticacao.md) descreve cadastro, login, sessão, logout e o isolamento dos dados de acompanhamento. Os CRUDs exigem `Authorization: Bearer <token>`.
 
 ## Contrato da API
 
@@ -124,7 +129,7 @@ No `POST` aninhado, o ID da pessoa vem da rota. Nos dois caminhos de cadastro e 
 
 | Campo | Regra para POST e PUT |
 | --- | --- |
-| `usuarioId` | Opcional. Positivo, até 10 dígitos. Referencia um usuário existente sem vínculo com outra pessoa acompanhada |
+| `usuarioId` | Positivo, até 10 dígitos, quando houver um vínculo provisionado. Use `null` no cadastro e preserve o valor retornado pela API na atualização |
 | `nome` | Obrigatório, com conteúdo além de espaços e até 100 caracteres |
 | `dataNascimento` | Obrigatória, no formato `AAAA-MM-DD`, até a data atual e sem idade mínima |
 | `observacao` | Opcional, até 300 caracteres |
@@ -155,8 +160,8 @@ No `POST` aninhado, o ID da pessoa vem da rota. Nos dois caminhos de cadastro e 
 | --- | --- |
 | `pessoaAcompanhadaId` | Obrigatório em `POST /registros-cuidado` e `PUT /registros-cuidado/{id}`. Positivo e com até 10 dígitos. No POST aninhado, use o ID na rota |
 | `areaId` | Obrigatório, positivo e com até 3 dígitos |
-| `usuarioCriouId` | Obrigatório, positivo e com até 10 dígitos |
-| `usuarioRealizouId`, `medicamentoId`, `consultaId` | Opcionais. Quando informados, devem ser positivos, ter até 10 dígitos e referenciar dados existentes |
+| `usuarioCriouId` | Opcional na entrada. A API usa a conta autenticada no cadastro e preserva o criador na atualização |
+| `usuarioRealizouId`, `medicamentoId`, `consultaId` | Opcionais. O executor deve ser a conta autenticada ou o executor já registrado. Medicamento e consulta devem pertencer à mesma pessoa acompanhada |
 | `titulo` | Obrigatório, com conteúdo além de espaços e até 100 caracteres |
 | `detalhe` | Opcional, até 300 caracteres |
 | `dataPrevista`, `dataRealizado` | Pelo menos uma é obrigatória. Use data e hora ISO 8601 local, como `2026-11-18T09:00:00` |
@@ -187,9 +192,9 @@ Na raiz do projeto, execute a suíte pelo PowerShell.
 .\mvnw.cmd test
 ~~~
 
-A suíte cobre os três CRUDs, as rotas aninhadas, a regra de área habilitada, CORS, o carregamento do contexto Spring e o acesso JDBC com mocks. Os testes automatizados rodam sem uma instância Oracle.
+A suíte cobre os três CRUDs, as rotas aninhadas, a regra de área habilitada, autenticação, isolamento entre famílias, CORS, o carregamento do contexto Spring e o acesso JDBC com mocks. Os testes automatizados rodam sem uma instância Oracle.
 
-**Resultado da execução de 18/11/2026:** 48 testes executados com sucesso, sem falhas, erros ou testes ignorados.
+**Resultado da execução de 18/11/2026:** 55 testes executados com sucesso, sem falhas, erros ou testes ignorados.
 
 
 ## Equipe

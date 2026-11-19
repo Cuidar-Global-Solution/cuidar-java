@@ -7,6 +7,7 @@ import br.com.fiap.cuidar.handler.GlobalExceptionHandler;
 import br.com.fiap.cuidar.mapper.AreaCuidadoMapper;
 import br.com.fiap.cuidar.models.AreaCuidado;
 import br.com.fiap.cuidar.service.AreaCuidadoService;
+import br.com.fiap.cuidar.service.AcessoCuidado;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class AreaCuidadoCrudTests {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AreaCuidadoController(
-                new AreaCuidadoService(dao), new AreaCuidadoMapper(new ModelMapper())))
+                new AreaCuidadoService(dao), new AreaCuidadoMapper(new ModelMapper()), mock(AcessoCuidado.class)))
                 .setControllerAdvice(new GlobalExceptionHandler()).setValidator(validator).build();
     }
 

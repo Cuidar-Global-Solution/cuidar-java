@@ -12,7 +12,9 @@ public class PessoaAcompanhadaService {
 
     public PessoaAcompanhadaService(PessoaAcompanhadaDAO dao) { this.dao = dao; }
 
-    public PessoaAcompanhada cadastrar(PessoaAcompanhada pessoa) { return dao.cadastrar(pessoa); }
+    public PessoaAcompanhada cadastrar(PessoaAcompanhada pessoa, long familiarId) {
+        return dao.cadastrarComFamiliar(pessoa, familiarId);
+    }
     public List<PessoaAcompanhada> listar() { return dao.listar(); }
     public PessoaAcompanhada buscarPorId(Long id) {
         return dao.buscarPorId(id).orElseThrow(PessoaAcompanhadaNaoEncontradaException::new);

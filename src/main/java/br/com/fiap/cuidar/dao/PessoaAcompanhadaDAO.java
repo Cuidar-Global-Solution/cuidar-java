@@ -18,11 +18,42 @@ public class PessoaAcompanhadaDAO {
     public PessoaAcompanhadaDAO(DataSource dataSource) { this.dataSource = dataSource; }
 
     public PessoaAcompanhada cadastrar(PessoaAcompanhada pessoa) {
+        try (Connection connection = dataSource.getConnection()) {
+            return inserir(connection, pessoa);
+        } catch (SQLException e) { throw traduzir(e); }
+    }
+
+    public PessoaAcompanhada cadastrarComFamiliar(PessoaAcompanhada pessoa, long familiarId) {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                inserir(connection, pessoa);
+                try (PreparedStatement vinculo = connection.prepareStatement("""
+                        INSERT INTO TB_USUARIO_PESSOA_CUIDADO (CD_USUARIO, CD_PESSOA_ACOMPANHADA)
+                        VALUES (?, ?)
+                        """)) {
+                    vinculo.setLong(1, familiarId);
+                    vinculo.setLong(2, pessoa.getId());
+                    vinculo.executeUpdate();
+                }
+                connection.commit();
+                return pessoa;
+            } catch (SQLException | RuntimeException e) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollback) {
+                    e.addSuppressed(rollback);
+                }
+                throw e;
+            }
+        } catch (SQLException e) { throw traduzir(e); }
+    }
+
+    private PessoaAcompanhada inserir(Connection connection, PessoaAcompanhada pessoa) throws SQLException {
         String sql = "INSERT INTO TB_PESSOA_ACOMPANHADA (" + COLUNAS
                 + ") VALUES (SQ_TB_PESSOA_ACOMPANHADA.NEXTVAL, ?, ?, ?, ?, ?, ?)";
         // Informar a coluna evita que o driver Oracle retorne apenas o ROWID.
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, new String[]{"CD_PESSOA_ACOMPANHADA"})) {
+        try (PreparedStatement statement = connection.prepareStatement(sql, new String[]{"CD_PESSOA_ACOMPANHADA"})) {
             preencher(statement, pessoa);
             statement.executeUpdate();
             try (ResultSet keys = statement.getGeneratedKeys()) {
@@ -30,7 +61,7 @@ public class PessoaAcompanhadaDAO {
                 pessoa.setId(keys.getLong(1));
             }
             return pessoa;
-        } catch (SQLException e) { throw traduzir(e); }
+        }
     }
 
     public List<PessoaAcompanhada> listar() {

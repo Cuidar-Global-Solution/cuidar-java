@@ -4,6 +4,7 @@ import br.com.fiap.cuidar.dto.AreaCuidadoRequest;
 import br.com.fiap.cuidar.dto.AreaCuidadoResponse;
 import br.com.fiap.cuidar.mapper.AreaCuidadoMapper;
 import br.com.fiap.cuidar.service.AreaCuidadoService;
+import br.com.fiap.cuidar.service.AcessoCuidado;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
@@ -17,14 +18,17 @@ import java.util.List;
 public class AreaCuidadoController {
     private final AreaCuidadoService service;
     private final AreaCuidadoMapper mapper;
+    private final AcessoCuidado acesso;
 
-    public AreaCuidadoController(AreaCuidadoService service, AreaCuidadoMapper mapper) {
+    public AreaCuidadoController(AreaCuidadoService service, AreaCuidadoMapper mapper, AcessoCuidado acesso) {
         this.service = service;
         this.mapper = mapper;
+        this.acesso = acesso;
     }
 
     @PostMapping
     public ResponseEntity<AreaCuidadoResponse> cadastrar(@Valid @RequestBody AreaCuidadoRequest request) {
+        acesso.gerirAreas();
         var area = service.cadastrar(mapper.toEntity(request));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(area.getId()).toUri();
@@ -44,11 +48,13 @@ public class AreaCuidadoController {
     @PutMapping("/{id}")
     public ResponseEntity<AreaCuidadoResponse> atualizar(@PathVariable @Positive Long id,
                                                        @Valid @RequestBody AreaCuidadoRequest request) {
+        acesso.gerirAreas();
         return ResponseEntity.ok(mapper.toResponse(service.atualizar(id, mapper.toEntity(request))));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable @Positive Long id) {
+        acesso.gerirAreas();
         service.excluir(id);
         return ResponseEntity.noContent().build();
     }
