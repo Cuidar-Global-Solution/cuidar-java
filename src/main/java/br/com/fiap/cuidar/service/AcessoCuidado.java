@@ -47,8 +47,15 @@ public class AcessoCuidado {
     }
 
     public void alterarPessoa(long id) {
-        exigirFamiliar();
+        Conta conta = exigirFamiliar();
         lerPessoa(id);
+        exigirVinculoDeGravacao(conta, id);
+    }
+
+    public boolean podeGravarRegistros(long pessoaId) {
+        Conta conta = contaAtual();
+        lerPessoa(pessoaId);
+        return conta.perfil() != Perfil.ACOMPANHADO && vinculos.podeRegistrar(conta.id(), pessoaId);
     }
 
     public void validarContaDaPessoa(PessoaAcompanhada atual, PessoaAcompanhada alterada) {
@@ -67,12 +74,14 @@ public class AcessoCuidado {
         Conta conta = exigirEquipe();
         if (atual == null) {
             lerPessoa(alterado.getPessoaAcompanhadaId());
+            exigirVinculoDeGravacao(conta, alterado.getPessoaAcompanhadaId());
             if (alterado.getUsuarioCriouId() != null && alterado.getUsuarioCriouId() != conta.id()) {
                 throw proibido("O criador deve ser o usuário autenticado.");
             }
             alterado.setUsuarioCriouId(conta.id());
         } else {
             lerRegistro(atual);
+            exigirVinculoDeGravacao(conta, atual.getPessoaAcompanhadaId());
             if (!Objects.equals(atual.getPessoaAcompanhadaId(), alterado.getPessoaAcompanhadaId())) {
                 throw proibido("O registro deve permanecer com a pessoa acompanhada original.");
             }
@@ -94,8 +103,15 @@ public class AcessoCuidado {
     }
 
     public void excluirRegistro(RegistroCuidado registro) {
-        exigirEquipe();
+        Conta conta = exigirEquipe();
         lerRegistro(registro);
+        exigirVinculoDeGravacao(conta, registro.getPessoaAcompanhadaId());
+    }
+
+    private void exigirVinculoDeGravacao(Conta conta, long pessoaId) {
+        if (!vinculos.podeRegistrar(conta.id(), pessoaId)) {
+            throw proibido("O vínculo ativo precisa permitir a gravação.");
+        }
     }
 
     public void gerirAreas() {

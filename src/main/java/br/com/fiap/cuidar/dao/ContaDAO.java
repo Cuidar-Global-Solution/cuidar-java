@@ -62,6 +62,21 @@ public class ContaDAO {
         }
     }
 
+    public Optional<Long> buscarIdProfissional(String emailNormalizado) {
+        String sql = """
+                SELECT CD_USUARIO FROM TB_USUARIO
+                WHERE LOWER(TRIM(DS_EMAIL)) = ? AND TP_USUARIO = 'PROFISSIONAL'
+                """;
+        try (var conexao = dataSource.getConnection(); var comando = conexao.prepareStatement(sql)) {
+            comando.setString(1, emailNormalizado);
+            try (var dados = comando.executeQuery()) {
+                return dados.next() ? Optional.of(dados.getLong("CD_USUARIO")) : Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new PersistenciaException(e);
+        }
+    }
+
     static Conta lerConta(ResultSet dados) throws SQLException {
         return new Conta(dados.getLong("CD_USUARIO"), dados.getString("NM_USUARIO"),
                 dados.getString("DS_EMAIL"), Perfil.valueOf(dados.getString("TP_USUARIO")));

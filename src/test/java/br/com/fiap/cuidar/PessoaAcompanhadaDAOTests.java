@@ -5,6 +5,8 @@ import br.com.fiap.cuidar.exception.ConflitoException;
 import br.com.fiap.cuidar.exception.PersistenciaException;
 import br.com.fiap.cuidar.models.PessoaAcompanhada;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDate;
@@ -49,6 +51,52 @@ class PessoaAcompanhadaDAOTests {
 
     private String[] aryEqColuna() {
         return org.mockito.AdditionalMatchers.aryEq(new String[]{"CD_PESSOA_ACOMPANHADA"});
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void pessoaEVinculoSaoGravadosNaMesmaTransacao(boolean falhaNoVinculo) throws Exception {
+        DataSource ds = mock(DataSource.class);
+        Connection connection = mock(Connection.class);
+        PreparedStatement insertPessoa = mock(PreparedStatement.class);
+        PreparedStatement insertVinculo = mock(PreparedStatement.class);
+        ResultSet keys = mock(ResultSet.class);
+        when(ds.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(contains("SQ_TB_PESSOA_ACOMPANHADA.NEXTVAL"), aryEqColuna()))
+                .thenReturn(insertPessoa);
+        when(connection.prepareStatement(argThat(sql -> sql.contains("INSERT INTO TB_VINCULO")
+                && sql.contains("SQ_TB_VINCULO.NEXTVAL")
+                && sql.contains("'FAMILIAR', 'REGISTRAR', 'ATIVO', SYSDATE"))))
+                .thenReturn(insertVinculo);
+        when(insertPessoa.getGeneratedKeys()).thenReturn(keys);
+        when(keys.next()).thenReturn(true);
+        when(keys.getLong(1)).thenReturn(55L);
+        var pessoa = new PessoaAcompanhada();
+        pessoa.setNome("Maria");
+        pessoa.setDataNascimento(LocalDate.of(1950, 1, 2));
+        pessoa.setTamanhoFonte(18);
+        pessoa.setAltoContraste("N");
+        var dao = new PessoaAcompanhadaDAO(ds);
+        if (falhaNoVinculo) {
+            when(insertVinculo.executeUpdate()).thenThrow(new SQLException("Falha no vínculo"));
+            assertThrows(PersistenciaException.class, () -> dao.cadastrarComFamiliar(pessoa, 12L));
+            verify(connection, never()).commit();
+        } else {
+            assertEquals(55L, dao.cadastrarComFamiliar(pessoa, 12L).getId());
+            verify(connection, never()).rollback();
+        }
+        var ordem = inOrder(connection, insertPessoa, insertVinculo);
+        ordem.verify(connection).setAutoCommit(false);
+        ordem.verify(insertPessoa).executeUpdate();
+        ordem.verify(insertVinculo).setLong(1, 12L);
+        ordem.verify(insertVinculo).setLong(2, 55L);
+        ordem.verify(insertVinculo).executeUpdate();
+        if (falhaNoVinculo) {
+            ordem.verify(connection).rollback();
+        } else {
+            ordem.verify(connection).commit();
+        }
+        verify(ds).getConnection();
     }
 
     @Test

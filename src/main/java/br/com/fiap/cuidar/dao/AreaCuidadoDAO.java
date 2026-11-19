@@ -36,11 +36,23 @@ public class AreaCuidadoDAO {
     public List<AreaCuidado> listar() {
         String sql = "SELECT " + COLUNAS + " FROM TB_AREA_CUIDADO ORDER BY CD_AREA";
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
-             ResultSet result = statement.executeQuery()) {
-            List<AreaCuidado> areas = new ArrayList<>();
-            while (result.next()) { areas.add(ler(result)); }
-            return areas;
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            return consultarAreas(statement);
+        } catch (SQLException e) { throw traduzir(e); }
+    }
+
+    public List<AreaCuidado> listarPorPessoa(Long pessoaId) {
+        String sql = """
+                SELECT a.CD_AREA, a.NM_AREA, a.DS_AREA
+                FROM TB_PESSOA_AREA_CUIDADO pa
+                JOIN TB_AREA_CUIDADO a ON a.CD_AREA = pa.CD_AREA
+                WHERE pa.CD_PESSOA_ACOMPANHADA = ?
+                ORDER BY a.CD_AREA
+                """;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, pessoaId);
+            return consultarAreas(statement);
         } catch (SQLException e) { throw traduzir(e); }
     }
 
@@ -53,6 +65,27 @@ public class AreaCuidadoDAO {
                 return result.next() ? Optional.of(ler(result)) : Optional.empty();
             }
         } catch (SQLException e) { throw traduzir(e); }
+    }
+
+    public void habilitarParaPessoa(Long pessoaId, Long areaId) {
+        String sql = """
+                INSERT INTO TB_PESSOA_AREA_CUIDADO (CD_PESSOA_AREA, CD_PESSOA_ACOMPANHADA, CD_AREA, DT_INCLUSAO)
+                VALUES (SQ_TB_PESSOA_AREA_CUIDADO.NEXTVAL, ?, ?, SYSDATE)
+                """;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, pessoaId);
+            statement.setLong(2, areaId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1) {
+                throw new ConflitoException("A área já está habilitada para a pessoa acompanhada.", e);
+            }
+            if (e.getErrorCode() == 2291) {
+                throw new ConflitoException("A pessoa acompanhada ou a área deixou de estar disponível.", e);
+            }
+            throw new PersistenciaException(e);
+        }
     }
 
     public boolean atualizar(AreaCuidado area) {
@@ -77,6 +110,14 @@ public class AreaCuidadoDAO {
         statement.setString(1, area.getNome());
         if (area.getDescricao() == null) { statement.setNull(2, Types.VARCHAR); }
         else { statement.setString(2, area.getDescricao()); }
+    }
+
+    private List<AreaCuidado> consultarAreas(PreparedStatement statement) throws SQLException {
+        try (ResultSet result = statement.executeQuery()) {
+            List<AreaCuidado> areas = new ArrayList<>();
+            while (result.next()) { areas.add(ler(result)); }
+            return areas;
+        }
     }
 
     private AreaCuidado ler(ResultSet result) throws SQLException {

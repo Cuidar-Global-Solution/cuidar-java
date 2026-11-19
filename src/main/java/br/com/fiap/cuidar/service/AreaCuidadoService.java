@@ -14,6 +14,11 @@ public class AreaCuidadoService {
 
     public AreaCuidado cadastrar(AreaCuidado area) { return dao.cadastrar(area); }
     public List<AreaCuidado> listar() { return dao.listar(); }
+    public List<AreaCuidado> listarPorPessoa(Long pessoaId) { return dao.listarPorPessoa(pessoaId); }
+    public void habilitarParaPessoa(Long pessoaId, Long areaId) {
+        buscarPorId(areaId);
+        dao.habilitarParaPessoa(pessoaId, areaId);
+    }
     public AreaCuidado buscarPorId(Long id) {
         return dao.buscarPorId(id).orElseThrow(AreaCuidadoNaoEncontradaException::new);
     }

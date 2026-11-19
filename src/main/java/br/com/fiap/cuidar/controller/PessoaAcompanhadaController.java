@@ -48,6 +48,15 @@ public class PessoaAcompanhadaController {
         return ResponseEntity.ok(mapper.toResponse(service.buscarPorId(id)));
     }
 
+    @GetMapping("/{id}/permissoes")
+    public Permissoes permissoes(@PathVariable @Positive Long id) {
+        boolean gravar = acesso.podeGravarRegistros(id);
+        service.buscarPorId(id);
+        return new Permissoes(gravar ? "REGISTRAR" : "VISUALIZAR");
+    }
+
+    public record Permissoes(String permissao) {}
+
     @PutMapping("/{id}")
     public ResponseEntity<PessoaAcompanhadaResponse> atualizar(@PathVariable @Positive Long id,
                                                         @Valid @RequestBody PessoaAcompanhadaRequest request) {

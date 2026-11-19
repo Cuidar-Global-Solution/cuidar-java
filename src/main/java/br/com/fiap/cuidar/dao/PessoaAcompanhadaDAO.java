@@ -28,14 +28,7 @@ public class PessoaAcompanhadaDAO {
             connection.setAutoCommit(false);
             try {
                 inserir(connection, pessoa);
-                try (PreparedStatement vinculo = connection.prepareStatement("""
-                        INSERT INTO TB_USUARIO_PESSOA_CUIDADO (CD_USUARIO, CD_PESSOA_ACOMPANHADA)
-                        VALUES (?, ?)
-                        """)) {
-                    vinculo.setLong(1, familiarId);
-                    vinculo.setLong(2, pessoa.getId());
-                    vinculo.executeUpdate();
-                }
+                VinculoCuidadoDAO.inserirFamiliar(connection, familiarId, pessoa.getId());
                 connection.commit();
                 return pessoa;
             } catch (SQLException | RuntimeException e) {
