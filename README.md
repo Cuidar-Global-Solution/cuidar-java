@@ -31,10 +31,17 @@ O **Cuidar+** organiza a rotina de cuidados da pessoa acompanhada e a colaboraç
 
 A entrega inclui os CRUDs de **PessoaAcompanhada**, **AreaCuidado** e **RegistroCuidado**, com persistência JDBC no Oracle. A API usa Docker no Render e integra-se ao dashboard familiar, publicado na Vercel.
 
-- [API no Render](https://cuidar-java.onrender.com/pessoas-acompanhadas)
+- [API no Render](https://cuidar-java.onrender.com/)
 - [Dashboard familiar na Vercel](https://cuidar-front.vercel.app/dashboard/familiar)
+- [Vídeo de demonstração](https://youtu.be/rtLToGb0z1k)
 
-Na validação da entrega, os três CRUDs foram testados pelo Postman na API publicada. A tentativa de gravar um registro com uma área sem vínculo retornou `409 Conflict`. Pelo dashboard, a listagem de pessoas acompanhadas retornou `200 OK` e o cadastro retornou `201 Created`.
+Antes da inclusão da autenticação, os três CRUDs foram testados pelo Postman na API publicada. A tentativa de gravar um registro com uma área sem vínculo retornou `409 Conflict`. Pelo dashboard, a listagem de pessoas acompanhadas retornou `200 OK` e o cadastro retornou `201 Created`.
+
+Na versão final, o fluxo integrado entre a Vercel e a API no Render foi validado com login, criação de registro de cuidado, consulta do registro após recarregar a página, convite ao cuidador, aceite e revogação do acesso.
+
+No Oracle de homologação, a pessoa acompanhada, a área habilitada, o registro de cuidado e o vínculo revogado permaneceram gravados após reiniciar a API.
+
+Dois convites simultâneos para a mesma pessoa acompanhada e o mesmo profissional retornaram HTTP `204 No Content` e `409 Conflict`, com apenas um vínculo pendente gravado.
 
 
 ## Arquitetura
@@ -72,19 +79,20 @@ A organização usa o [cineFiap da professora Eliane Marion](https://github.com/
 1. No Oracle SQL Developer, conecte-se a um schema vazio com permissão para criar tabelas e sequences.
 2. Use **Arquivo → Abrir** para abrir [`docs/sql/cuidar-schema.sql`](./docs/sql/cuidar-schema.sql) e selecione a conexão do schema na planilha SQL.
 3. Pressione **F5 (Executar Script)** para executar o arquivo inteiro. Confira a saída do script para identificar eventuais erros de criação.
+4. Em seguida, execute [`docs/sql/cuidar-autenticacao.sql`](./docs/sql/cuidar-autenticacao.sql) na mesma conexão.
 
-Em seguida, execute o [script de autenticação](./docs/sql/cuidar-autenticacao.sql) na mesma conexão. A execução desses scripts em um schema vazio ainda precisa ser validada. Para testar registros de cuidado, cadastre a pessoa acompanhada, a área e o usuário criador. Se informar usuário executor, medicamento ou consulta, cadastre também essas referências. Habilite a área para a pessoa inserindo o par em `TB_PESSOA_AREA_CUIDADO` e confirme os dados com `COMMIT` antes de chamar a API.
+A execução desses scripts em um schema vazio ainda precisa ser validada.
+
+Para testar registros de cuidado, cadastre a pessoa acompanhada, a área e o usuário criador. Se informar usuário executor, medicamento ou consulta, cadastre também essas referências. Habilite a área para a pessoa inserindo o par em `TB_PESSOA_AREA_CUIDADO` e confirme os dados com `COMMIT` antes de chamar a API.
 
 ### Rodar a API no Windows
 
 Use o JDK 21 e tenha acesso à internet no primeiro uso do Maven Wrapper. Configure as variáveis na sessão do PowerShell antes de iniciar a API.
 
-| Variável de ambiente | Valor esperado |
-| --- | --- |
-| `SPRING_DATASOURCE_URL` | URL JDBC do Oracle no formato `jdbc:oracle:thin:@//HOST:PORTA/SERVICO` |
-| `SPRING_DATASOURCE_USERNAME` | Usuário do schema Oracle |
-| `SPRING_DATASOURCE_PASSWORD` | Senha do usuário Oracle, definida fora dos arquivos versionados |
-| `CUIDAR_CORS_ALLOWED_ORIGINS` | Origens exatas separadas por vírgula, sem curingas ou caminhos. Para o dashboard publicado, use `https://cuidar-front.vercel.app`. O padrão vazio bloqueia requisições de outras origens no navegador. |
+- `SPRING_DATASOURCE_URL`
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
+- `CUIDAR_CORS_ALLOWED_ORIGINS`
 
 Na raiz do projeto, execute pelo PowerShell.
 
@@ -92,7 +100,7 @@ Na raiz do projeto, execute pelo PowerShell.
 .\mvnw.cmd spring-boot:run
 ~~~
 
-A API local fica disponível em `http://localhost:8080`. O `Dockerfile` gera o JAR com o Maven Wrapper em uma etapa com JDK 21 e o executa com JRE 21. No contêiner, a variável `PORT` define a porta HTTP e assume `8080` por padrão.
+A API local fica disponível em `http://localhost:8080`. O `Dockerfile` gera o JAR com o Maven Wrapper em uma etapa com JDK 21 e o executa com JRE 21. No contêiner, a variável `PORT` define a porta HTTP.
 
 ## Autenticação
 
@@ -194,7 +202,7 @@ Na raiz do projeto, execute a suíte pelo PowerShell.
 
 A suíte cobre os três CRUDs, as rotas aninhadas, a regra de área habilitada, autenticação, isolamento entre famílias, CORS, o carregamento do contexto Spring e o acesso JDBC com mocks. Os testes automatizados rodam sem uma instância Oracle.
 
-**Resultado da execução de 18/11/2026:** 55 testes executados com sucesso, sem falhas, erros ou testes ignorados.
+**Resultado da execução:** 69 testes automatizados aprovados, sem falhas, erros ou testes ignorados.
 
 
 ## Equipe
